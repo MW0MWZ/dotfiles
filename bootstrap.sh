@@ -204,7 +204,23 @@ print_bash_install_help() {
     esac
 }
 
+# Re-exec into bash if we are not already running under bash *in
+# non-POSIX mode*. The latter check matters on macOS / Solaris / some
+# Fedora setups where /bin/sh is bash invoked as sh: BASH_VERSION is
+# set but bash runs in POSIX mode and rejects process substitution
+# (used in lib/stow.sh).
+_need_reexec=0
 if [ -z "${BASH_VERSION:-}" ]; then
+    _need_reexec=1
+elif [ -n "${POSIXLY_CORRECT:-}" ]; then
+    _need_reexec=1
+else
+    # set -o is POSIX; we look for "posix on" which only bash emits.
+    _posix=$(set -o 2>/dev/null | awk '$1=="posix"{print $NF}')
+    [ "$_posix" = "on" ] && _need_reexec=1
+fi
+
+if [ "$_need_reexec" = "1" ]; then
     BASH_PATH=""
     if ! BASH_PATH=$(find_bash); then
         msg "bash not found; attempting to install it via the system package manager..."
