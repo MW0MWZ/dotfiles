@@ -28,18 +28,32 @@ sh bootstrap.sh
 
 ## What bootstrap.sh does
 
-1. Detects the OS, current shell, and whether bash is reachable.
-2. Re-execs under bash once a working `bash` is located (POSIX-sh in the
-   early phase so it runs from sh/dash/ksh/zsh/old-bash).
+1. Detects the OS, current shell, and whether bash is reachable. If
+   bash isn't installed, tries to install it via the system package
+   manager before giving up (handles Alpine / minimal images).
+2. Re-execs under bash once a working `bash` is located. Re-exec also
+   fires when the current shell *is* bash but in POSIX mode (e.g.
+   `/bin/sh -> bash` on macOS and some Fedora installs), since
+   later lib helpers use process substitution that POSIX mode rejects.
 3. Verifies `git`, `stow`, and `curl|wget` are installed; offers to
    install missing ones via the system package manager.
 4. Clones (or pulls) the repo to `$DOTFILES_DIR` (default
    `~/.dotfiles`).
-5. For each stow package (`bash`, `tmux`), backs up any pre-existing
-   real file at the target to `<file>.bak.<timestamp>` and then
-   symlinks the repo copy into `$HOME`.
-6. Prompts to change the login shell to bash (`chsh`).
-7. Prompts to install `tmux`, `mosh`, and Docker.
+5. For each stow package (`bash`, `tmux`), walks the target tree and
+   moves any pre-existing real file aside to `<file>.bak.<timestamp>`
+   before symlinking. The walker is tree-aware: if a directory in
+   `$HOME` is already a symlink into the repo, it skips that subtree
+   instead of recursing through the symlink — so re-runs of bootstrap
+   (or `update.sh`) never corrupt the repo by `mv`-ing through a
+   folded directory.
+6. Prompts to change the login shell to bash (`chsh`). Skipped when
+   the current login shell already resolves to the same binary
+   (`/bin/bash` and `/usr/bin/bash` on usrmerge distros are the same
+   file via symlink). Failure of `chsh` itself (e.g. PAM password
+   prompt with no controlling tty) prints a manual-fix hint and
+   continues — it never aborts bootstrap.
+7. Prompts to install `tmux`, `mosh`, `fzf`, `direnv`, `bash-completion`,
+   and Docker. Each is independent; skip what you don't want.
 
 ## What update.sh does
 
@@ -67,8 +81,8 @@ source of truth.
 ├── lib/
 │   ├── detect.sh        OS / shell / bash-version probes
 │   ├── install.sh       per-OS package install helpers
-│   ├── stow.sh          back up conflicts, then stow each package
-│   ├── optional.sh      chsh prompt + tmux/mosh/docker installer
+│   ├── stow.sh          tree-aware backup-on-conflict, then stow each package
+│   ├── optional.sh      chsh prompt + tmux/mosh/fzf/direnv/bash-completion/docker installer
 │   └── os/<platform>.sh per-platform package update routine
 ├── bash/                stow package: $HOME bash environment
 │   ├── .bash_profile
@@ -91,6 +105,21 @@ Files the dotfiles never touch but the rc files source if present:
 
 Edit these freely. They never get overwritten by `update.sh`.
 
+## tmux defaults worth flagging
+
+- **Mouse mode is off by default.** macOS Terminal.app's xterm-mouse
+  handoff to tmux drops clicks and feeds scroll events to the wrong
+  pane. If you want it on per-session: `prefix : set mouse on`.
+- **Copy uses OSC 52**, not platform clipboard tools. `prefix [` enters
+  copy-mode, motion keys + `y` copies, and tmux emits an escape
+  sequence the outer terminal decodes into your local clipboard. Works
+  identically whether tmux is local or on a remote you `ssh`/`mosh`'d
+  into. Each terminal needs to be told once to honour OSC 52:
+    - **iTerm2:** Preferences → General → Selection →
+      "Applications in terminal may access clipboard"
+    - **Terminal.app:** `defaults write com.apple.Terminal AllowClipboardAccess -bool true`
+    - **kitty, foot, wezterm, Alacritty:** on by default
+
 ## Supported platforms
 
 | Platform                | Bootstrap | OS update routine               |
@@ -101,6 +130,7 @@ Edit these freely. They never get overwritten by `update.sh`.
 | Fedora                  | yes       | `lib/os/linux-fedora.sh`        |
 | Arch                    | yes       | `lib/os/linux-arch.sh`          |
 | openSUSE / SLES         | yes       | `lib/os/linux-suse.sh`          |
+| Alpine                  | yes       | `lib/os/linux-alpine.sh`        |
 | FreeBSD                 | yes       | `lib/os/freebsd.sh`             |
 | OpenBSD                 | yes       | `lib/os/openbsd.sh`             |
 | Solaris 10 / 11         | yes       | `lib/os/sunos.sh` (OpenCSW pkgutil) |
