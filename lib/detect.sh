@@ -63,6 +63,7 @@ detect_platform() {
                 *:rhel:*|*:centos:*|*:rocky:*|*:almalinux:*) PLATFORM="linux-rhel" ;;
                 *:arch:*)                      PLATFORM="linux-arch" ;;
                 *:suse:*|*:opensuse*:*|*:sles:*) PLATFORM="linux-suse" ;;
+                *:alpine:*)                    PLATFORM="linux-alpine" ;;
                 *)                             PLATFORM="linux-unknown" ;;
             esac ;;
         *) PLATFORM="unknown" ;;

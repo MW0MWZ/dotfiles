@@ -16,6 +16,8 @@ install_pkg() {
                     ${SUDO} pacman -S --noconfirm --needed "$pkg" ;;
                 *:suse:*|*:opensuse*:*|*:sles:*)
                     ${SUDO} zypper install -y "$pkg" ;;
+                *:alpine:*)
+                    ${SUDO} apk add --no-cache "$pkg" ;;
                 *)
                     return 1 ;;
             esac ;;

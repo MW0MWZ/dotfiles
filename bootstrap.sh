@@ -94,6 +94,8 @@ install_pkg() {
                     ${SUDO} pacman -S --noconfirm --needed "$pkg" ;;
                 *:suse:*|*:opensuse*:*|*:sles:*)
                     ${SUDO} zypper install -y "$pkg" ;;
+                *:alpine:*)
+                    ${SUDO} apk add --no-cache "$pkg" ;;
                 *)
                     return 1 ;;
             esac ;;
@@ -127,7 +129,8 @@ print_install_hint() {
             err "  RHEL/CentOS:    ${SUDO} yum install $pkg"
             err "  Fedora:         ${SUDO} dnf install $pkg"
             err "  Arch:           ${SUDO} pacman -S $pkg"
-            err "  openSUSE/SLES:  ${SUDO} zypper install $pkg" ;;
+            err "  openSUSE/SLES:  ${SUDO} zypper install $pkg"
+            err "  Alpine:         ${SUDO} apk add $pkg" ;;
         Darwin)  err "  brew install $pkg" ;;
         FreeBSD) err "  ${SUDO} pkg install $pkg" ;;
         OpenBSD) err "  ${SUDO} pkg_add $pkg" ;;
