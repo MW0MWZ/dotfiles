@@ -27,9 +27,9 @@ maybe_chsh() {
     # Login shell on this account, best-effort across systems.
     local current_shell=""
     if command -v getent >/dev/null 2>&1; then
-        current_shell=$(getent passwd "$USER" 2>/dev/null | cut -d: -f7)
+        current_shell=$(getent passwd "${USER:-$(id -un 2>/dev/null)}" 2>/dev/null | cut -d: -f7)
     elif [ -r /etc/passwd ]; then
-        current_shell=$(grep "^$USER:" /etc/passwd | cut -d: -f7)
+        current_shell=$(grep "^${USER:-$(id -un 2>/dev/null)}:" /etc/passwd | cut -d: -f7)
     fi
 
     if [ "$current_shell" = "$bash_path" ]; then
