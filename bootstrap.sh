@@ -192,9 +192,9 @@ find_bash() {
 }
 
 print_bash_install_help() {
-    err "bash is required but was not found."
+    err "bash is required but was not found and auto-install failed."
     case "$OS" in
-        Linux)   err "Install with your package manager (apt/dnf/yum/pacman/zypper install bash)." ;;
+        Linux)   err "Install with your package manager (apt/dnf/yum/pacman/zypper/apk install bash)." ;;
         Darwin)  err "macOS ships /bin/bash; if missing, run: xcode-select --install" ;;
         FreeBSD) err "${SUDO} pkg install bash" ;;
         OpenBSD) err "${SUDO} pkg_add bash" ;;
@@ -205,13 +205,21 @@ print_bash_install_help() {
 }
 
 if [ -z "${BASH_VERSION:-}" ]; then
-    if BASH_PATH=$(find_bash); then
-        msg "Re-executing under $BASH_PATH"
-        export DOTFILES_REPO DOTFILES_DIR OS ARCH DISTRO_ID DISTRO_ID_LIKE SUDO
-        exec "$BASH_PATH" "$0" "$@"
+    BASH_PATH=""
+    if ! BASH_PATH=$(find_bash); then
+        msg "bash not found; attempting to install it via the system package manager..."
+        install_pkg bash || msg "auto-install of bash failed."
+        BASH_PATH=$(find_bash) || BASH_PATH=""
     fi
-    print_bash_install_help
-    exit 1
+
+    if [ -z "$BASH_PATH" ]; then
+        print_bash_install_help
+        exit 1
+    fi
+
+    msg "Re-executing under $BASH_PATH"
+    export DOTFILES_REPO DOTFILES_DIR OS ARCH DISTRO_ID DISTRO_ID_LIKE SUDO
+    exec "$BASH_PATH" "$0" "$@"
 fi
 
 # ====================================================================
@@ -282,9 +290,26 @@ detect_all
 stow_packages "$DOTFILES_DIR" "$HOME" bash tmux
 
 # ---- chsh prompt -----------------------------------------------------
-maybe_chsh "$BASH"
+# $BASH is whatever path was used to invoke us, which on some distros
+# (Fedora's /bin/sh -> bash, busybox-ish layouts) is not the canonical
+# bash binary path. Resolve to a real bash binary before offering it
+# to chsh.
+RESOLVED_BASH=""
+for cand in \
+    /opt/homebrew/bin/bash \
+    /usr/local/bin/bash \
+    /opt/csw/bin/bash \
+    /usr/bin/bash \
+    /bin/bash
+do
+    if [ -x "$cand" ]; then RESOLVED_BASH="$cand"; break; fi
+done
+if [ -z "$RESOLVED_BASH" ]; then
+    RESOLVED_BASH=$(command -v bash 2>/dev/null || echo "$BASH")
+fi
+maybe_chsh "$RESOLVED_BASH"
 
 # ---- optional tools --------------------------------------------------
 offer_optional_tools
 
-msg "Done. Start a new shell, or: exec \"$BASH\" -l"
+msg "Done. Start a new shell, or: exec \"$RESOLVED_BASH\" -l"
