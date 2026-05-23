@@ -1,0 +1,26 @@
+# ~/.inputrc - readline configuration.
+
+# Case-insensitive completion.
+set completion-ignore-case on
+
+# Treat hyphens and underscores as equivalent during completion.
+set completion-map-case on
+
+# Display all matches when the completion is ambiguous, without a second tab.
+set show-all-if-ambiguous on
+set show-all-if-unmodified on
+
+# Append a slash to symlinks-to-directories during completion.
+set mark-symlinked-directories on
+
+# Colour the completion list to mirror ls.
+set colored-stats on
+set colored-completion-prefix on
+set visible-stats on
+
+# Type a prefix then up/down to walk through history matching that prefix.
+"\e[A": history-search-backward
+"\e[B": history-search-forward
+
+# Skip the leading menu beep.
+set bell-style none
