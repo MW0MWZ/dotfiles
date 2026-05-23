@@ -56,9 +56,12 @@ __ps1_segments() {
     printf '%s' "$out"
 }
 
+# Format: user@host:path, with ssh/scp-style colon separator. The pipe
+# ` | ` separator is reserved for the conditional segments (git, direnv)
+# so its presence is meaningful -- it always signals "there's another
+# segment after this one".
 PS1='┌['
-PS1+="${_C_GREEN}"'\u'"${_C_BLUE}"'@'"${_C_GREEN}"'\h'"${_C_RESET}"
-PS1+=' | '"${_C_BLUE}"'cwd: '"${_C_GREEN}"'\w'"${_C_RESET}"
+PS1+="${_C_GREEN}"'\u'"${_C_BLUE}"'@'"${_C_GREEN}"'\h'"${_C_BLUE}"':'"${_C_GREEN}"'\w'"${_C_RESET}"
 PS1+='$(__ps1_segments)'
 PS1+=']\n└$ '
 
