@@ -31,8 +31,15 @@ maybe_chsh() {
         current_shell=$(grep "^${USER:-$(id -un 2>/dev/null)}:" /etc/passwd | cut -d: -f7)
     fi
 
-    if [ "$current_shell" = "$bash_path" ]; then
-        _opt_msg "Login shell is already $bash_path -- skipping chsh."
+    # On usrmerge distros /bin/bash and /usr/bin/bash are the same file
+    # via a symlink. Compare the resolved real paths, not the strings.
+    local current_real="$current_shell" bash_real="$bash_path"
+    if [ -e "$current_shell" ]; then
+        current_real=$(readlink -f "$current_shell" 2>/dev/null || echo "$current_shell")
+    fi
+    bash_real=$(readlink -f "$bash_path" 2>/dev/null || echo "$bash_path")
+    if [ "$current_real" = "$bash_real" ]; then
+        _opt_msg "Login shell is already $current_shell (-> $current_real) -- skipping chsh."
         return 0
     fi
 
@@ -47,13 +54,16 @@ maybe_chsh() {
         _opt_msg "Adding $bash_path to /etc/shells (requires sudo)."
         printf '%s\n' "$bash_path" | ${SUDO} tee -a /etc/shells >/dev/null || {
             _opt_msg "Failed to update /etc/shells. Run manually: echo '$bash_path' | sudo tee -a /etc/shells"
-            return 1
+            return 0
         }
     fi
 
-    if ! chsh -s "$bash_path"; then
-        _opt_msg "chsh failed. Re-run manually: chsh -s $bash_path"
-        return 1
+    # chsh needs a controlling tty for PAM password prompts. In non-tty
+    # sessions (scripted ssh, docker run -i) it cannot succeed; print a
+    # hint and move on rather than aborting bootstrap.
+    if ! chsh -s "$bash_path" 2>&1; then
+        _opt_msg "chsh failed (likely no controlling tty). Run manually: chsh -s $bash_path"
+        return 0
     fi
     _opt_msg "Login shell changed. Open a new shell session for it to take effect."
 }

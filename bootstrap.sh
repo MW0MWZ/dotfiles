@@ -323,9 +323,13 @@ done
 if [ -z "$RESOLVED_BASH" ]; then
     RESOLVED_BASH=$(command -v bash 2>/dev/null || echo "$BASH")
 fi
-maybe_chsh "$RESOLVED_BASH"
+# Both of these are "nice to have, don't kill the bootstrap" steps.
+# Belt-and-suspenders against set -e: the functions are written to
+# return 0 on routine failures, but a stray non-zero from a nested
+# call shouldn't take the whole bootstrap down.
+maybe_chsh "$RESOLVED_BASH" || true
 
 # ---- optional tools --------------------------------------------------
-offer_optional_tools
+offer_optional_tools || true
 
 msg "Done. Start a new shell, or: exec \"$RESOLVED_BASH\" -l"
