@@ -76,10 +76,41 @@ _install_one() {
     fi
 }
 
+_offer_bash_completion() {
+    # bash-completion is a sourced library, not a PATH binary -- detect
+    # by checking the framework files instead of `command -v`.
+    local f
+    for f in \
+        /opt/homebrew/etc/profile.d/bash_completion.sh \
+        /usr/local/etc/profile.d/bash_completion.sh \
+        /usr/share/bash-completion/bash_completion \
+        /usr/local/share/bash-completion/bash_completion \
+        /etc/bash_completion \
+        /opt/csw/etc/bash_completion
+    do
+        if [ -r "$f" ]; then
+            _opt_msg "bash-completion already installed."
+            return 0
+        fi
+    done
+    if ! _opt_confirm "Install bash-completion (tab-completion for installed tools)?"; then
+        _opt_msg "Skipping bash-completion."
+        return 0
+    fi
+    case "$OS" in
+        Darwin) install_pkg bash-completion@2 ;;   # needs bash 4+; pairs with the brew bash install
+        *)      install_pkg bash-completion ;;
+    esac && _opt_msg "bash-completion installed." \
+         || _opt_msg "Failed to install bash-completion automatically."
+}
+
 offer_optional_tools() {
     _opt_msg "Optional tooling:"
     _install_one tmux tmux tmux
     _install_one mosh mosh mosh
+    _install_one fzf  fzf  fzf
+    _install_one direnv direnv direnv
+    _offer_bash_completion
 
     # Docker is platform-specific: cask on macOS, native pkg on Linux.
     if command -v docker >/dev/null 2>&1; then
