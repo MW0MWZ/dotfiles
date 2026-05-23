@@ -23,12 +23,13 @@ msg() { printf '[bootstrap] %s\n' "$*"; }
 err() { printf '[bootstrap] error: %s\n' "$*" >&2; }
 
 ask() {
-    # ask "prompt" -> sets REPLY (reads from /dev/tty so piped-stdin still works)
+    # ask "prompt" -> sets REPLY. Prefer /dev/tty (so piped-stdin doesn't
+    # silently feed our prompts), but fall back to stdin silently when
+    # /dev/tty isn't usable (e.g. docker run without -t).
     printf '[bootstrap] %s ' "$1" >&2
-    if [ -r /dev/tty ]; then
-        IFS= read -r REPLY </dev/tty || REPLY=""
-    else
-        IFS= read -r REPLY || REPLY=""
+    REPLY=""
+    if ! { IFS= read -r REPLY </dev/tty; } 2>/dev/null; then
+        IFS= read -r REPLY 2>/dev/null || REPLY=""
     fi
 }
 confirm() {

@@ -8,10 +8,9 @@
 _opt_msg()  { printf '[bootstrap] %s\n' "$*"; }
 _opt_ask()  {
     printf '[bootstrap] %s ' "$1" >&2
-    if [ -r /dev/tty ]; then
-        IFS= read -r REPLY </dev/tty || REPLY=""
-    else
-        IFS= read -r REPLY || REPLY=""
+    REPLY=""
+    if ! { IFS= read -r REPLY </dev/tty; } 2>/dev/null; then
+        IFS= read -r REPLY 2>/dev/null || REPLY=""
     fi
 }
 _opt_confirm() {
